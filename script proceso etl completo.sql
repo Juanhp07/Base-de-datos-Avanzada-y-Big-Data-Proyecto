@@ -1,11 +1,9 @@
--- =========================================================
--- Script 2. Proceso ETL completo - dw_onlineretail
--- =========================================================
+--Proceso ETL COMPLETO
 
 use dw_onlineretail
 go
 
--- ---------- PASO 1: reseteo de tablas ----------
+-- PASO 1: reseteo de tablas
 
 delete from fac_ventas
 if @@ROWCOUNT <> 0
@@ -32,9 +30,8 @@ go
 truncate table stg_onlineretail
 go
 
--- ---------- PASO 2: extraccion a staging (BULK INSERT) ----------
--- Se usa tabulador (CHAR(9)) como separador: la descripcion del producto
--- trae texto con comas adentro, y un CSV separado por comas desplaza columnas.
+-- PASO 2: extraccion a staging (BULK INSERT)
+
 
 BEGIN
   DECLARE @ARCHIVO VARCHAR(200)
@@ -50,14 +47,12 @@ go
 select count(*) as totalStaging from stg_onlineretail
 go
 
--- ---------- PASO 3: transformacion y carga de dimensiones ----------
+-- PASO 3: transformacion y carga de dimensiones
 
--- dim_tipotransaccion: valores fijos, derivados del prefijo de numeroFactura
 insert into dim_tipotransaccion (pk_tipotransaccion, nombre)
 values ('V', 'Venta'), ('C', 'Cancelacion')
 go
 
--- dim_cliente: clientes distintos, mas un registro "Desconocido"
 insert into dim_cliente (pk_cliente, esDesconocido)
 select distinct idCliente, 0
 from stg_onlineretail
@@ -68,7 +63,6 @@ insert into dim_cliente (pk_cliente, esDesconocido)
 values (null, 1)
 go
 
--- dim_producto: por codigoProducto, con una sola descripcion por codigo
 insert into dim_producto (pk_producto, nombre)
 select codigoProducto, max(descripcionProducto)
 from stg_onlineretail
@@ -76,16 +70,12 @@ where codigoProducto is not null
 group by codigoProducto
 go
 
--- dim_pais: paises distintos
 insert into dim_pais (nombrePais)
 select distinct pais
 from stg_onlineretail
 where pais is not null
 go
 
--- dim_tiempo: un dia por fila, entre la fecha minima y maxima del staging
--- (fechaFactura es texto: se convierte con TRY_CONVERT, o como numero de
--- serie de Excel si el texto no convierte directo)
 declare @inicio date, @fin date
 select @inicio = min(COALESCE(
                         TRY_CONVERT(date, fechaFactura, 103),
@@ -115,7 +105,7 @@ WHILE (@inicio <= @fin)
     end
 go
 
--- ---------- PASO 4: carga de la tabla de hechos ----------
+-- PASO 4: carga de la tabla de hechos
 
 insert into fac_ventas
     (id_cliente, id_producto, id_pais, id_tipotransaccion, fecha,
@@ -150,7 +140,7 @@ group by coalesce(D_CL.id_cliente, D_CLU.id_cliente), D_PR.id_producto, D_PA.id_
     D_TT.id_tipotransaccion, FC.fecha, S.numeroFactura, S.precioUnitario
 go
 
--- ---------- PASO 5: verificacion de la carga ----------
+-- PASO 5: verificacion de la carga
 
 select
     (select count(*) from stg_onlineretail) as total_staging,

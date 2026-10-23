@@ -34,16 +34,16 @@ go
 
 
 BEGIN
-  DECLARE @ARCHIVO VARCHAR(200)
-  SET @ARCHIVO = 'C:\txt\onlineretail.txt'
+ DECLARE @ARCHIVO VARCHAR(200)
+SET @ARCHIVO = 'C:\txt\onlineretail.txt'
 
-  DECLARE @sql VARCHAR(MAX)
-  SET @sql = 'BULK INSERT dw_onlineretail.dbo.stg_onlineretail' +
-             ' FROM ''' + @ARCHIVO + ''' WITH (FIELDTERMINATOR = ''' + CHAR(9) + ''', ROWTERMINATOR = ''\n'', FIRSTROW = 2, CODEPAGE=''65001'')'
-  EXEC(@sql)
+DECLARE @sql VARCHAR(MAX)
+SET @sql = 'BULK INSERT dw_onlineretail.dbo.stg_onlineretail' +
+    ' FROM ''' + @ARCHIVO + ''' WITH (FIELDTERMINATOR = ''' + CHAR(9) + ''', ROWTERMINATOR = ''0x0a'', FIRSTROW = 2, CODEPAGE=''65001'')'
+EXEC(@sql)
 END
 go
-
+UPDATE stg_onlineretail SET pais = REPLACE(pais, CHAR(13), '')
 select count(*) as totalStaging from stg_onlineretail
 go
 
